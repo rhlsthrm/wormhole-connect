@@ -21,6 +21,7 @@ import { TransferWallet, switchChain, watchAsset } from 'utils/wallet';
 import TokenIcon from 'icons/TokenIcons';
 import ExplorerLink from './ExplorerLink';
 import { isGatewayChain } from 'utils/cosmos';
+import { isPorticoRoute } from 'routes/porticoBridge/utils';
 
 const useStyles = makeStyles()((theme) => ({
   addToken: {
@@ -160,6 +161,7 @@ function AddToWallet() {
   useEffect(() => {
     const fetchTokenInfo = async () => {
       if (isGatewayChain(txData.toChain)) return;
+      if (route && isPorticoRoute(route)) return;
       const tokenInfo = TOKENS[txData.receivedTokenKey];
       const wrapped = getWrappedToken(tokenInfo);
       if (!wrapped.tokenId) return;

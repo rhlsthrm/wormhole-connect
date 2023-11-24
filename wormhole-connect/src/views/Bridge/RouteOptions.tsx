@@ -18,6 +18,8 @@ import TokenIcon from 'icons/TokenIcons';
 import ArrowRightIcon from 'icons/ArrowRight';
 import Options from 'components/Options';
 import { isGatewayChain } from 'utils/cosmos';
+import PorticoBridgeInputs from './Inputs/PorticoBridgeInputs';
+import { isPorticoRoute } from 'routes/porticoBridge/utils';
 
 const useStyles = makeStyles()((theme: any) => ({
   link: {
@@ -86,6 +88,9 @@ const useStyles = makeStyles()((theme: any) => ({
     opacity: '0.6',
     fontSize: '12px',
   },
+  routeInputs: {
+    marginTop: '8px',
+  },
 }));
 
 export function Banner(props: { text?: string; route?: RouteData }) {
@@ -140,29 +145,59 @@ function Tag(props: TagProps) {
   );
 }
 
-function RouteOption(props: { route: RouteData }) {
+function RouteOption(props: { route: RouteData; routeInputs?: JSX.Element }) {
   const { classes } = useStyles();
   const theme = useTheme();
   const mobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const { token, destToken, amount, toChain } = useSelector(
+  const { token, destToken, amount, toChain, fromChain } = useSelector(
     (state: RootState) => state.transferInput,
   );
   const { toNativeToken, relayerFee } = useSelector(
     (state: RootState) => state.relay,
   );
+  const portico = useSelector((state: RootState) => state.porticoBridge);
   const [receiveAmt, setReceiveAmt] = useState<number | undefined>(undefined);
 
   useEffect(() => {
+    let cancelled = false;
     async function load() {
-      const receiveAmt = await RouteOperator.computeReceiveAmount(
-        props.route.route,
-        Number.parseFloat(amount),
-        { toNativeToken, relayerFee },
-      );
-      setReceiveAmt(Number.parseFloat(toFixedDecimals(`${receiveAmt}`, 6)));
+      try {
+        const routeOptions = isPorticoRoute(props.route.route)
+          ? portico
+          : { toNativeToken, relayerFee };
+        const receiveAmt = await RouteOperator.computeReceiveAmount(
+          props.route.route,
+          Number.parseFloat(amount),
+          token,
+          destToken,
+          fromChain,
+          toChain,
+          routeOptions,
+        );
+        if (!cancelled) {
+          setReceiveAmt(Number.parseFloat(toFixedDecimals(`${receiveAmt}`, 6)));
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setReceiveAmt(0);
+        }
+      }
     }
     load();
-  }, [props.route, amount, toNativeToken, relayerFee]);
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    props.route,
+    amount,
+    toNativeToken,
+    relayerFee,
+    token,
+    destToken,
+    toChain,
+    fromChain,
+    portico,
+  ]);
   const fromTokenConfig = TOKENS[token];
   const fromTokenIcon = fromTokenConfig && (
     <TokenIcon name={fromTokenConfig.icon} height={20} />
@@ -180,59 +215,70 @@ function RouteOption(props: { route: RouteData }) {
   const isAutomatic = useMemo(
     () =>
       route.AUTOMATIC_DEPOSIT ||
-      (toChain && (isGatewayChain(toChain) || toChain === 'sei')),
+      (toChain && (isGatewayChain(toChain) || toChain === 'sei')) ||
+      isPorticoRoute(route.TYPE),
     [route, toChain],
   );
 
   return (
     fromTokenConfig &&
     toTokenConfig && (
-      <div className={classes.route}>
-        <div className={classes.routeLeft}>
-          <div className={classes.routeTitle}>
-            {props.route.name}
-            {/* TODO: isAutomatic to route and use transfer parameters to decide */}
-            {isAutomatic ? (
-              <Chip
-                label="One transaction"
-                color="success"
-                variant="outlined"
-                size="small"
+      <>
+        <div className={classes.route}>
+          <div className={classes.routeLeft}>
+            <div className={classes.routeTitle}>
+              {props.route.name}
+              {/* TODO: isAutomatic to route and use transfer parameters to decide */}
+              {isAutomatic ? (
+                <Chip
+                  label="One transaction"
+                  color="success"
+                  variant="outlined"
+                  size="small"
+                />
+              ) : (
+                <Chip
+                  label="Two transactions"
+                  color="warning"
+                  variant="outlined"
+                  size="small"
+                />
+              )}
+            </div>
+            <div className={classes.routePath}>
+              <Tag
+                icon={fromTokenIcon}
+                text={getDisplayName(fromTokenConfig)}
+                colorFilled
               />
-            ) : (
-              <Chip
-                label="Two transactions"
-                color="warning"
-                variant="outlined"
-                size="small"
+              <ArrowRightIcon fontSize={mobile ? 'inherit' : undefined} />
+              <Tag icon={props.route.icon()} text={props.route.providedBy} />
+              <ArrowRightIcon fontSize={mobile ? 'inherit' : undefined} />
+              <Tag
+                icon={toTokenIcon}
+                text={getDisplayName(toTokenConfig)}
+                colorFilled
               />
-            )}
+            </div>
           </div>
-          <div className={classes.routePath}>
-            <Tag
-              icon={fromTokenIcon}
-              text={getDisplayName(fromTokenConfig)}
-              colorFilled
-            />
-            <ArrowRightIcon fontSize={mobile ? 'inherit' : undefined} />
-            <Tag icon={props.route.icon()} text={props.route.providedBy} />
-            <ArrowRightIcon fontSize={mobile ? 'inherit' : undefined} />
-            <Tag
-              icon={toTokenIcon}
-              text={getDisplayName(toTokenConfig)}
-              colorFilled
-            />
+          <div className={classes.routeRight}>
+            <div>
+              {receiveAmt} {getDisplayName(TOKENS[destToken])}
+            </div>
+            <div className={classes.routeAmt}>after fees</div>
           </div>
         </div>
-        <div className={classes.routeRight}>
-          <div>
-            {receiveAmt} {getDisplayName(TOKENS[destToken])}
-          </div>
-          <div className={classes.routeAmt}>after fees</div>
-        </div>
-      </div>
+        {!!props.routeInputs ? (
+          <div className={classes.routeInputs}>{props.routeInputs}</div>
+        ) : null}
+      </>
     )
   );
+}
+
+function getRouteInputsComponent(route: Route) {
+  if (isPorticoRoute(route)) return <PorticoBridgeInputs />;
+  return undefined;
 }
 
 function RouteOptions() {
@@ -302,9 +348,15 @@ function RouteOptions() {
         collapsed={collapsed}
       >
         {availableRoutes.map((route_) => {
+          const routeInputs = getRouteInputsComponent(route_ as Route);
           return {
             key: route_,
-            child: <RouteOption route={RoutesConfig[route_ as Route]} />,
+            child: (
+              <RouteOption
+                route={RoutesConfig[route_ as Route]}
+                routeInputs={routeInputs}
+              />
+            ),
           };
         })}
       </Options>

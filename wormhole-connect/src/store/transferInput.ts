@@ -84,6 +84,7 @@ export type TransferValidations = {
   route: ValidationErr;
   toNativeToken: ValidationErr;
   foreignAsset: ValidationErr;
+  receiveAmount: ValidationErr;
 };
 
 export interface TransferInputState {
@@ -124,6 +125,7 @@ const initialState: TransferInputState = {
     sendingWallet: '',
     receivingWallet: '',
     foreignAsset: '',
+    receiveAmount: '',
   },
   availableRoutes: undefined,
   fromChain: config?.bridgeDefaults?.fromNetwork || undefined,
@@ -212,6 +214,8 @@ const establishRoute = (state: TransferInputState) => {
     Route.CCTPRelay,
     Route.CCTPManual,
     Route.TBTC,
+    Route.ETHBridge,
+    Route.wstETHBridge,
     Route.Relay,
     Route.Bridge,
   ];

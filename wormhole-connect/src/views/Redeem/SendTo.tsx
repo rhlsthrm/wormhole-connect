@@ -7,7 +7,7 @@ import { CHAINS } from 'config';
 import { RootState } from 'store';
 import { setRedeemTx, setTransferComplete } from 'store/redeem';
 import { displayAddress } from 'utils';
-import { TransferDisplayData } from 'routes';
+import { TransferDestInfo } from 'routes';
 import RouteOperator from 'routes/operator';
 import {
   TransferWallet,
@@ -24,6 +24,59 @@ import WalletsModal from '../WalletModal';
 import Header from './Header';
 import { estimateClaimGas } from 'utils/gas';
 import { isGatewayChain } from '../../utils/cosmos';
+import { Route } from 'config/types';
+import Switch from 'components/Switch';
+import PorticoSwapFailed from './PorticoSwapFailed';
+import { isPorticoRoute } from 'routes/porticoBridge/utils';
+import Tooltip from '@mui/material/Tooltip';
+import InfoIcon from 'icons/Info';
+import { makeStyles } from 'tss-react/mui';
+
+const useStyles = makeStyles()((theme: any) => ({
+  flex: {
+    display: 'flex',
+    alignItems: 'center',
+  },
+  icon: {
+    height: '14px',
+    cursor: 'pointer',
+  },
+  switch: {
+    marginRight: '8px',
+  },
+}));
+
+function SwitchToManualClaim({
+  checked,
+  onChange,
+  disabled,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  disabled: boolean;
+}) {
+  const { classes } = useStyles();
+  return (
+    <div className={classes.flex}>
+      {!checked && <span>Waiting for relayer. . .</span>}
+      <div className={classes.flex} style={{ marginLeft: 'auto' }}>
+        <Switch
+          checked={checked}
+          onChange={(event) => onChange(event.target.checked)}
+          disabled={disabled}
+          className={classes.switch}
+        />
+        <span>Switch to manual claim</span>
+        <Tooltip
+          title="Claim your tokens manually. This avoids the relayer fee but requires you to pay the gas fee."
+          arrow
+        >
+          <InfoIcon className={classes.icon} />
+        </Tooltip>
+      </div>
+    </div>
+  );
+}
 
 function SendTo() {
   const dispatch = useDispatch();
@@ -36,6 +89,7 @@ function SendTo() {
   const txData = useSelector((state: RootState) => state.redeem.txData)!;
   const wallet = useSelector((state: RootState) => state.wallet.receiving);
   const [claimError, setClaimError] = useState('');
+  const [manualClaim, setManualClaim] = useState(false);
 
   const connect = () => {
     setWalletModal(true);
@@ -51,7 +105,7 @@ function SendTo() {
 
   const [inProgress, setInProgress] = useState(false);
   const [isConnected, setIsConnected] = useState(checkConnection());
-  const [rows, setRows] = useState([] as TransferDisplayData);
+  const [transferDestInfo, setTransferDestInfo] = useState<TransferDestInfo>();
   const [openWalletModal, setWalletModal] = useState(false);
 
   // get the redeem tx, for automatic transfers only
@@ -87,13 +141,16 @@ function SendTo() {
           signedMessage,
         );
       }
-      const rows = await RouteOperator.getTransferDestInfo(routeName, {
+      await RouteOperator.getTransferDestInfo(routeName, {
         txData,
         receiveTx,
         transferComplete,
         gasEstimate,
-      });
-      setRows(rows);
+      })
+        .then((destInfo) => {
+          setTransferDestInfo(destInfo);
+        })
+        .catch((e) => console.error(e));
     };
     populate();
   }, [transferComplete, getRedeemTx, txData, routeName, signedMessage]);
@@ -102,12 +159,14 @@ function SendTo() {
     setIsConnected(checkConnection());
   }, [wallet, checkConnection]);
 
-  const AUTOMATIC_DEPOSIT = useMemo(() => {
+  const isRelayerRoute = useMemo(() => {
     if (!routeName) return false;
+    const route = RouteOperator.getRoute(routeName);
     return (
-      RouteOperator.getRoute(routeName).AUTOMATIC_DEPOSIT ||
+      route.AUTOMATIC_DEPOSIT ||
       isGatewayChain(txData.toChain) ||
-      txData.toChain === 'sei'
+      txData.toChain === 'sei' ||
+      isPorticoRoute(route.TYPE)
     );
   }, [routeName, txData]);
 
@@ -154,11 +213,15 @@ function SendTo() {
     }
   };
 
-  const loading = !AUTOMATIC_DEPOSIT
+  const showSwitchToManualClaim =
+    !transferComplete && isPorticoRoute(routeName as Route);
+  const onSwitchToManualClaim = (checked: boolean) => setManualClaim(checked);
+
+  const loading = !isRelayerRoute
     ? inProgress && !transferComplete
     : !transferComplete;
   const manualClaimText =
-    transferComplete || AUTOMATIC_DEPOSIT // todo: should be the other enum, should be named better than payload id
+    transferComplete || isRelayerRoute // todo: should be the other enum, should be named better than payload id
       ? ''
       : claimError
       ? 'Error please retry . . .'
@@ -173,11 +236,24 @@ function SendTo() {
           txHash={redeemTx}
           text={manualClaimText}
         />
-        <RenderRows rows={rows} />
+        <>
+          {showSwitchToManualClaim && (
+            <SwitchToManualClaim
+              checked={manualClaim}
+              onChange={onSwitchToManualClaim}
+              disabled={inProgress}
+            />
+          )}
+        </>
+        <RenderRows rows={transferDestInfo?.displayData || []} />
+        <>
+          {!!transferDestInfo?.extraData &&
+            getExtraDataComponent(routeName, transferDestInfo.extraData)}
+        </>
       </InputContainer>
 
       {/* Claim button for manual transfers */}
-      {!AUTOMATIC_DEPOSIT && !transferComplete && (
+      {!transferComplete && (!isRelayerRoute || manualClaim) && (
         <>
           <Spacer height={8} />
           <AlertBanner
@@ -213,6 +289,16 @@ function SendTo() {
       {/* {pending && <Confirmations confirmations={vaa.guardianSignatures} />} */}
     </div>
   );
+}
+
+function getExtraDataComponent(
+  route: Route | undefined,
+  extraData: any,
+): JSX.Element | null {
+  if (route && isPorticoRoute(route)) {
+    return <PorticoSwapFailed info={extraData} />;
+  }
+  return null;
 }
 
 export default SendTo;

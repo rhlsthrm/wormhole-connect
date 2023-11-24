@@ -13,6 +13,7 @@ import {
   setSupportedDestTokens,
   setAllSupportedDestTokens,
   TransferInputState,
+  getNativeVersionOfToken,
 } from 'store/transferInput';
 import { CHAINS, TOKENS, pageHeader, showHamburgerMenu } from 'config';
 import { TokenConfig } from 'config/types';
@@ -36,6 +37,9 @@ import RouteOptions from './RouteOptions';
 import ValidationError from './ValidationError';
 import PoweredByIcon from 'icons/PoweredBy';
 import FooterNavBar from 'components/FooterNavBar';
+import { isPorticoRoute } from 'routes/porticoBridge/utils';
+import { ETHBridge } from 'routes/porticoBridge/ethBridge';
+import { wstETHBridge } from 'routes/porticoBridge/wstETHBridge';
 
 const useStyles = makeStyles()((theme) => ({
   spacer: {
@@ -93,6 +97,7 @@ function Bridge() {
   const { toNativeToken, relayerFee } = useSelector(
     (state: RootState) => state.relay,
   );
+  const portico = useSelector((state: RootState) => state.porticoBridge);
   const { receiving } = useSelector((state: RootState) => state.wallet);
 
   // check destination native balance
@@ -150,9 +155,6 @@ function Bridge() {
       if (!selectedIsSupported) {
         dispatch(setDestToken(''));
       }
-      if (supported.length === 1 && destToken === '') {
-        dispatch(setDestToken(supported[0].key));
-      }
 
       // If all the supported tokens are the same token
       // select the native version
@@ -172,6 +174,22 @@ function Bridge() {
           dispatch(setDestToken(key));
         }
       }
+
+      // If the token is supported by a Portico bridge route,
+      // select the native version
+      if (destToken === '' && toChain && token) {
+        const tokenSymbol = TOKENS[token]?.symbol;
+        const porticoSupported = [
+          ...ETHBridge.SUPPORTED_TOKENS,
+          ...wstETHBridge.SUPPORTED_TOKENS,
+        ].includes(tokenSymbol);
+        if (porticoSupported) {
+          const key = getNativeVersionOfToken(tokenSymbol, toChain);
+          if (key && isSupportedToken(key, supported)) {
+            dispatch(setDestToken(key));
+          }
+        }
+      }
     };
     computeDestTokens();
     // IMPORTANT: do not include destToken in dependency array
@@ -181,15 +199,37 @@ function Bridge() {
   useEffect(() => {
     const recomputeReceive = async () => {
       if (!route) return;
-      const newReceiveAmount = await RouteOperator.computeReceiveAmount(
-        route,
-        Number.parseFloat(amount),
-        { toNativeToken, relayerFee },
-      );
-      dispatch(setReceiveAmount(newReceiveAmount.toString()));
+      try {
+        const routeOptions = isPorticoRoute(route)
+          ? portico
+          : { toNativeToken, relayerFee };
+        const newReceiveAmount = await RouteOperator.computeReceiveAmount(
+          route,
+          Number.parseFloat(amount),
+          token,
+          destToken,
+          fromChain,
+          toChain,
+          routeOptions,
+        );
+        dispatch(setReceiveAmount(newReceiveAmount.toString()));
+      } catch {
+        dispatch(setReceiveAmount(''));
+      }
     };
     recomputeReceive();
-  }, [amount, toNativeToken, relayerFee, route, dispatch]);
+  }, [
+    amount,
+    toNativeToken,
+    relayerFee,
+    route,
+    token,
+    destToken,
+    toChain,
+    fromChain,
+    portico,
+    dispatch,
+  ]);
 
   // validate transfer inputs
   useValidate();

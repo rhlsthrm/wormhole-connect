@@ -32,6 +32,7 @@ import { toDecimals, toFixedDecimals } from '../../utils/balance';
 import {
   RelayTransferMessage,
   SignedRelayTransferMessage,
+  TransferDestInfo,
   TransferDisplayData,
   isSignedWormholeMessage,
 } from '../types';
@@ -96,10 +97,13 @@ export class RelayRoute extends BridgeRoute implements RelayAbstract {
     return !(
       relayerFee === undefined ||
       parseFloat(amount) <
-        this.getMinSendAmount({
-          relayerFee: toDecimals(relayerFee, decimals),
-          toNativeToken: 0,
-        })
+        this.getMinSendAmount(
+          {
+            relayerFee: toDecimals(relayerFee, decimals),
+            toNativeToken: 0,
+          },
+          destToken,
+        )
     );
   }
 
@@ -163,7 +167,11 @@ export class RelayRoute extends BridgeRoute implements RelayAbstract {
   }
 
   async computeReceiveAmount(
-    sendAmount: number | undefined,
+    sendAmount: number,
+    token: string,
+    destToken: string,
+    sendingChain: ChainName | undefined,
+    recipientChain: ChainName | undefined,
     routeOptions: RelayOptions,
   ): Promise<number> {
     if (!sendAmount) return 0;
@@ -254,7 +262,11 @@ export class RelayRoute extends BridgeRoute implements RelayAbstract {
   /**
    * These operations have to be implemented in subclasses.
    */
-  getMinSendAmount(routeOptions: any): number {
+  getMinSendAmount(
+    routeOptions: any,
+    destToken: string,
+    recipientChain?: ChainName | ChainId,
+  ): number {
     const { relayerFee, toNativeToken } = routeOptions;
 
     // has to be slightly higher than the minimum or else tx will revert
@@ -269,6 +281,7 @@ export class RelayRoute extends BridgeRoute implements RelayAbstract {
     senderAddress: string,
     recipientChain: ChainName | ChainId,
     recipientAddress: string,
+    destToken: string,
     routeOptions: RelayOptions,
   ): Promise<string> {
     const fromChainId = wh.toChainId(sendingChain);
@@ -349,6 +362,7 @@ export class RelayRoute extends BridgeRoute implements RelayAbstract {
     receipientChain: ChainName | ChainId,
     sendingGasEst: string,
     claimingGasEst: string,
+    receiveAmount: string,
     routeOptions: RelayOptions,
   ): Promise<TransferDisplayData> {
     const sendingChainName = wh.toChainName(sendingChain);
@@ -377,7 +391,14 @@ export class RelayRoute extends BridgeRoute implements RelayAbstract {
           )}`;
     }
 
-    const receiveAmt = await this.computeReceiveAmount(amount, routeOptions);
+    const receiveAmt = await this.computeReceiveAmount(
+      amount,
+      token.key,
+      destToken.key,
+      wh.toChainName(sendingChain),
+      wh.toChainName(receipientChain),
+      routeOptions,
+    );
 
     const nativeGasDisplay =
       receiveNativeAmt > 0
@@ -423,6 +444,7 @@ export class RelayRoute extends BridgeRoute implements RelayAbstract {
     sourceChain: ChainName | ChainId,
     destChain: ChainName | ChainId,
     token: string,
+    destToken?: string,
   ): Promise<BigNumber> {
     const context: any = wh.getContext(sourceChain);
     const tokenConfig = TOKENS[token];
@@ -497,7 +519,7 @@ export class RelayRoute extends BridgeRoute implements RelayAbstract {
     txData: data,
     receiveTx,
     transferComplete,
-  }: TransferDestInfoParams): Promise<TransferDisplayData> {
+  }: TransferDestInfoParams): Promise<TransferDestInfo> {
     const txData: SignedRelayTransferMessage =
       data as SignedRelayTransferMessage;
 
@@ -558,18 +580,20 @@ export class RelayRoute extends BridgeRoute implements RelayAbstract {
       MAX_DECIMALS,
     );
 
-    return [
-      {
-        title: 'Amount',
-        value: `${formattedAmt} ${getDisplayName(token)}`,
-      },
-      {
-        title: 'Native gas token',
-        value: nativeGasAmt
-          ? `${nativeGasAmt} ${getDisplayName(TOKENS[gasToken])}`
-          : NO_INPUT,
-      },
-    ];
+    return {
+      displayData: [
+        {
+          title: 'Amount',
+          value: `${formattedAmt} ${getDisplayName(token)}`,
+        },
+        {
+          title: 'Native gas token',
+          value: nativeGasAmt
+            ? `${nativeGasAmt} ${getDisplayName(TOKENS[gasToken])}`
+            : NO_INPUT,
+        },
+      ],
+    };
   }
 
   async tryFetchRedeemTx(message: SignedMessage): Promise<string | undefined> {

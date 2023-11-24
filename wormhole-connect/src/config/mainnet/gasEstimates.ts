@@ -22,6 +22,16 @@ export const MAINNET_GAS_ESTIMATES: GasEstimates = {
       sendToken: 150000,
       claim: 300000,
     },
+    [Route.ETHBridge]: {
+      sendNative: 300000,
+      sendToken: 300000,
+      claim: 450000,
+    },
+    [Route.wstETHBridge]: {
+      sendNative: 300000,
+      sendToken: 300000,
+      claim: 450000,
+    },
   },
   polygon: {
     [Route.Bridge]: {
@@ -36,6 +46,16 @@ export const MAINNET_GAS_ESTIMATES: GasEstimates = {
     [Route.TBTC]: {
       sendToken: 150000,
       claim: 300000,
+    },
+    [Route.ETHBridge]: {
+      sendNative: 300000,
+      sendToken: 300000,
+      claim: 450000,
+    },
+    [Route.wstETHBridge]: {
+      sendNative: 300000,
+      sendToken: 300000,
+      claim: 450000,
     },
   },
   bsc: {
@@ -161,6 +181,16 @@ export const MAINNET_GAS_ESTIMATES: GasEstimates = {
       sendToken: 150000,
       claim: 300000,
     },
+    [Route.ETHBridge]: {
+      sendNative: 300000,
+      sendToken: 300000,
+      claim: 450000,
+    },
+    [Route.wstETHBridge]: {
+      sendNative: 300000,
+      sendToken: 300000,
+      claim: 450000,
+    },
   },
   wormchain: {
     [Route.Bridge]: {
@@ -193,6 +223,16 @@ export const MAINNET_GAS_ESTIMATES: GasEstimates = {
       sendToken: 1000000,
       claim: 4000000,
     },
+    [Route.ETHBridge]: {
+      sendNative: 300000,
+      sendToken: 300000,
+      claim: 450000,
+    },
+    [Route.wstETHBridge]: {
+      sendNative: 300000,
+      sendToken: 300000,
+      claim: 450000,
+    },
   },
   optimism: {
     [Route.Bridge]: {
@@ -210,6 +250,16 @@ export const MAINNET_GAS_ESTIMATES: GasEstimates = {
     [Route.TBTC]: {
       sendToken: 100000,
       claim: 300000,
+    },
+    [Route.ETHBridge]: {
+      sendNative: 300000,
+      sendToken: 300000,
+      claim: 450000,
+    },
+    [Route.wstETHBridge]: {
+      sendNative: 300000,
+      sendToken: 300000,
+      claim: 450000,
     },
   },
   evmos: {

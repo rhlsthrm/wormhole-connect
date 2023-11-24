@@ -5,6 +5,7 @@ import { useTheme } from '@mui/material/styles';
 import { RootState } from 'store';
 import { setTransferRoute } from 'store/transferInput';
 import { setRelayerFee } from 'store/relay';
+import { setRelayerFee as setPorticoRelayerFee } from 'store/porticoBridge';
 import { CHAINS, TOKENS } from 'config';
 import { Route } from 'config/types';
 import { getTokenDecimals } from 'utils';
@@ -16,6 +17,7 @@ import RouteOperator from 'routes/operator';
 import { RenderRows } from 'components/RenderRows';
 import BridgeCollapse, { CollapseControlStyle } from './Collapse';
 import InputContainer from 'components/InputContainer';
+import { isPorticoRoute } from 'routes/porticoBridge/utils';
 
 function Preview(props: { collapsed: boolean }) {
   const dispatch = useDispatch();
@@ -34,6 +36,7 @@ function Preview(props: { collapsed: boolean }) {
   const { toNativeToken, receiveNativeAmt, relayerFee } = useSelector(
     (state: RootState) => state.relay,
   );
+  const portico = useSelector((state: RootState) => state.porticoBridge);
 
   useEffect(() => {
     const buildPreview = async () => {
@@ -45,11 +48,13 @@ function Preview(props: { collapsed: boolean }) {
       if (!tokenConfig || !destTokenConfig || !sourceConfig || !destConfig)
         return;
 
-      const routeOptions = {
-        toNativeToken,
-        receiveNativeAmt,
-        relayerFee,
-      };
+      const routeOptions = isPorticoRoute(route)
+        ? portico
+        : {
+            toNativeToken,
+            receiveNativeAmt,
+            relayerFee,
+          };
       const rows = await RouteOperator.getPreview(
         route,
         tokenConfig,
@@ -59,6 +64,7 @@ function Preview(props: { collapsed: boolean }) {
         toChain,
         gasEst.send,
         gasEst.claim,
+        receiveAmount,
         routeOptions,
       );
 
@@ -76,6 +82,7 @@ function Preview(props: { collapsed: boolean }) {
     receiveAmount,
     toNativeToken,
     receiveNativeAmt,
+    portico,
     gasEst,
     dispatch,
     relayerFee,
@@ -86,7 +93,7 @@ function Preview(props: { collapsed: boolean }) {
       if (!token || !fromChain || !toChain || !route) return;
       // don't bother if it's not an automatic route
       const r = RouteOperator.getRoute(route);
-      if (!r.AUTOMATIC_DEPOSIT) return;
+      if (!r.AUTOMATIC_DEPOSIT && !isPorticoRoute(r.TYPE)) return;
 
       try {
         const tokenConfig = token && TOKENS[token];
@@ -97,13 +104,18 @@ function Preview(props: { collapsed: boolean }) {
           fromChain,
           toChain,
           token,
+          destToken,
         );
-        const decimals = getTokenDecimals(
-          toChainId(fromChain),
-          tokenConfig.tokenId || 'native',
-        );
-        const formattedFee = Number.parseFloat(toDecimals(fee, decimals, 6));
-        dispatch(setRelayerFee(formattedFee));
+        if (isPorticoRoute(r.TYPE)) {
+          dispatch(setPorticoRelayerFee(fee.toString()));
+        } else {
+          const decimals = getTokenDecimals(
+            toChainId(fromChain),
+            tokenConfig.tokenId || 'native',
+          );
+          const formattedFee = Number.parseFloat(toDecimals(fee, decimals, 6));
+          dispatch(setRelayerFee(formattedFee));
+        }
       } catch (e: any) {
         if (e.message.includes('swap rate not set')) {
           if (route === Route.CCTPRelay) {
@@ -111,13 +123,15 @@ function Preview(props: { collapsed: boolean }) {
           } else {
             dispatch(setTransferRoute(Route.Bridge));
           }
+        } else if (isPorticoRoute(r.TYPE)) {
+          dispatch(setPorticoRelayerFee(''));
         } else {
           throw e;
         }
       }
     };
     computeRelayerFee();
-  }, [route, token, toChain, fromChain, dispatch]);
+  }, [route, token, destToken, toChain, fromChain, dispatch]);
 
   return (
     <BridgeCollapse

@@ -9,7 +9,6 @@ import { BigNumber } from 'ethers';
 import { CHAINS, ROUTES, TOKENS, TOKENS_ARR } from 'config';
 import { TokenConfig, Route } from 'config/types';
 import {
-  ParsedMessage,
   PayloadType,
   getMessage,
   isEvmChain,
@@ -28,13 +27,16 @@ import {
   SignedMessage,
   TransferDisplayData,
   TransferInfoBaseParams,
+  TransferDestInfo,
 } from './types';
 import {
   CCTPManualRoute,
   CCTP_LOG_TokenMessenger_DepositForBurn,
 } from './cctpManual';
 import { TBTCRoute } from './tbtc';
-import { getTokenById } from 'utils';
+import { getTokenById, isEqualCaseInsensitive } from 'utils';
+import { ETHBridge } from './porticoBridge/ethBridge';
+import { wstETHBridge } from './porticoBridge/wstETHBridge';
 
 export class Operator {
   getRoute(route: Route): RouteAbstract {
@@ -59,6 +61,12 @@ export class Operator {
       }
       case Route.TBTC: {
         return new TBTCRoute();
+      }
+      case Route.ETHBridge: {
+        return new ETHBridge();
+      }
+      case Route.wstETHBridge: {
+        return new wstETHBridge();
       }
       default: {
         throw new Error(`${route} is not a valid route`);
@@ -108,7 +116,20 @@ export class Operator {
       return Route.TBTC;
     }
 
-    return (message as ParsedMessage).payloadID === PayloadType.Automatic
+    const portico = wh.getContracts(chain)?.portico;
+    if (portico && message.fromAddress) {
+      if (isEqualCaseInsensitive(message.fromAddress, portico)) {
+        if (token?.symbol === 'ETH' || token?.symbol === 'WETH') {
+          return Route.ETHBridge;
+        }
+        if (token?.symbol === 'wstETH') {
+          return Route.wstETHBridge;
+        }
+        throw new Error(`Unsupported Portico bridge token ${token?.symbol}`);
+      }
+    }
+
+    return message.payloadID === PayloadType.Automatic
       ? Route.Relay
       : Route.Bridge;
   }
@@ -292,11 +313,22 @@ export class Operator {
 
   async computeReceiveAmount(
     route: Route,
-    sendAmount: number | undefined,
+    sendAmount: number,
+    token: string,
+    destToken: string,
+    sendingChain: ChainName | undefined,
+    recipientChain: ChainName | undefined,
     routeOptions: any,
   ): Promise<number> {
     const r = this.getRoute(route);
-    return await r.computeReceiveAmount(sendAmount, routeOptions);
+    return await r.computeReceiveAmount(
+      sendAmount,
+      token,
+      destToken,
+      sendingChain,
+      recipientChain,
+      routeOptions,
+    );
   }
   async computeSendAmount(
     route: Route,
@@ -370,6 +402,7 @@ export class Operator {
     senderAddress: string,
     recipientChain: ChainName | ChainId,
     recipientAddress: string,
+    destToken: string,
     routeOptions: any,
   ): Promise<string> {
     const r = this.getRoute(route);
@@ -380,6 +413,7 @@ export class Operator {
       senderAddress,
       recipientChain,
       recipientAddress,
+      destToken,
       routeOptions,
     );
   }
@@ -403,6 +437,7 @@ export class Operator {
     receipientChain: ChainName | ChainId,
     sendingGasEst: string,
     claimingGasEst: string,
+    receiveAmount: string,
     routeOptions?: any,
   ): Promise<TransferDisplayData> {
     const r = this.getRoute(route);
@@ -414,6 +449,7 @@ export class Operator {
       receipientChain,
       sendingGasEst,
       claimingGasEst,
+      receiveAmount,
       routeOptions,
     );
   }
@@ -423,9 +459,10 @@ export class Operator {
     sourceChain: ChainName | ChainId,
     destChain: ChainName | ChainId,
     token: string,
+    destToken?: string,
   ): Promise<BigNumber> {
     const r = this.getRoute(route);
-    return r.getRelayerFee(sourceChain, destChain, token);
+    return r.getRelayerFee(sourceChain, destChain, token, destToken);
   }
 
   async getForeignAsset(
@@ -475,7 +512,7 @@ export class Operator {
   getTransferDestInfo<T extends TransferInfoBaseParams>(
     route: Route,
     params: T,
-  ): Promise<TransferDisplayData> {
+  ): Promise<TransferDestInfo> {
     const r = this.getRoute(route);
     return r.getTransferDestInfo(params);
   }

@@ -96,6 +96,11 @@ Tokens (`tokens`):
 | tBTCarbitrum | tBTCarbitrum |
 | tBTCbase | tBTCbase |
 | tBTCsol | tBTCsol |
+| WETHpolygon | |
+| wstETH | wstETH |
+| wstETHarbitrum | |
+| wstETHoptimism | |
+| wstETHpolygon | |
 
 
 <br>
@@ -109,6 +114,8 @@ Routes (`routes`)
 | cctpRelay | cctpRelay |
 | cosmosGateway | cosmosGateway |
 | tbtc | tbtc |
+| ethBridge | |
+| wstETHBridge | |
 
 <br>
 

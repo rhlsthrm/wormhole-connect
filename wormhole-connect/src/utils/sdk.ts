@@ -155,7 +155,11 @@ export const toChainId = (chain: ChainName | ChainId) => {
   return wh.toChainId(chain);
 };
 
+export const toChainName = (chain: ChainName | ChainId) => {
+  return wh.toChainName(chain);
+};
+
 export const getMessage = (tx: string, chain: ChainName | ChainId) => {
-  const context: any = wh.getContext(chain);
+  const context = wh.getContext(chain);
   return context.getMessage(tx, chain, false);
 };
