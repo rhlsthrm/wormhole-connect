@@ -180,8 +180,12 @@ export class CCTPRelayRoute extends CCTPManualRoute implements RelayAbstract {
     const chainsAreValid =
       CCTPRelay_CHAINS.includes(sourceChainName) &&
       CCTPRelay_CHAINS.includes(destChainName);
-
     if (!chainsAreValid) return false;
+
+    const bothHaveRelayer =
+      CHAINS[sourceChainName]?.contracts.cctpContracts?.wormholeCircleRelayer &&
+      CHAINS[destChainName]?.contracts.cctpContracts?.wormholeCircleRelayer;
+    if (!bothHaveRelayer) return false;
 
     let relayerFee;
     try {
