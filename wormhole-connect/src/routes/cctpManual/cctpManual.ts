@@ -262,6 +262,7 @@ export class CCTPManualRoute extends BaseRoute {
   getMinSendAmount(routeOptions: any): number {
     return 0;
   }
+
   async send(
     token: TokenId | 'native',
     amount: string,
