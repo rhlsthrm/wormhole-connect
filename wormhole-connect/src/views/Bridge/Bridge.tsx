@@ -155,6 +155,9 @@ function Bridge() {
       if (!selectedIsSupported) {
         dispatch(setDestToken(''));
       }
+      if (supported.length === 1 && destToken === '') {
+        dispatch(setDestToken(supported[0].key));
+      }
 
       // If all the supported tokens are the same token
       // select the native version

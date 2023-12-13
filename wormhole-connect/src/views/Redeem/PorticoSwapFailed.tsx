@@ -11,7 +11,7 @@ const useStyles = makeStyles()((theme: any) => ({
   root: {
     display: 'flex',
     gap: '8px',
-    marginTop: theme.spacing(2),
+    marginTop: theme.spacing(1),
   },
   warningIcon: {
     color: theme.palette.warning[500],
