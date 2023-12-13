@@ -91,6 +91,7 @@ export class RelayRoute extends BridgeRoute implements RelayAbstract {
         sourceChain,
         destChain,
         sourceToken,
+        destToken,
       );
     } catch {}
     const decimals = getTokenDecimals(wh.toChainId(sourceChain), tokenId);
@@ -444,7 +445,7 @@ export class RelayRoute extends BridgeRoute implements RelayAbstract {
     sourceChain: ChainName | ChainId,
     destChain: ChainName | ChainId,
     token: string,
-    destToken?: string,
+    destToken: string,
   ): Promise<BigNumber> {
     const context: any = wh.getContext(sourceChain);
     const tokenConfig = TOKENS[token];

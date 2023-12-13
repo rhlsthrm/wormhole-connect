@@ -151,7 +151,7 @@ export abstract class RouteAbstract {
     sourceChain: ChainName | ChainId,
     destChain: ChainName | ChainId,
     token: string,
-    destToken?: string,
+    destToken: string,
   ): Promise<BigNumber>;
 
   abstract getForeignAsset(

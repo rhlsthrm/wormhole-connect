@@ -410,7 +410,7 @@ export class TBTCRoute extends BaseRoute {
     sourceChain: ChainName | ChainId,
     destChain: ChainName | ChainId,
     token: string,
-    destToken?: string,
+    destToken: string,
   ): Promise<BigNumber> {
     return BigNumber.from(0);
   }

@@ -195,6 +195,7 @@ export class CCTPRelayRoute extends CCTPManualRoute implements RelayAbstract {
         sourceChain,
         destChain,
         sourceToken,
+        destToken,
       );
     } catch {}
     return !(
@@ -444,7 +445,7 @@ export class CCTPRelayRoute extends CCTPManualRoute implements RelayAbstract {
     sourceChain: ChainName | ChainId,
     destChain: ChainName | ChainId,
     token: string,
-    destToken?: string,
+    destToken: string,
   ): Promise<BigNumber> {
     const tokenConfig = TOKENS[token];
     if (!tokenConfig) throw new Error('could not get token config');

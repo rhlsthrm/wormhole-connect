@@ -459,7 +459,7 @@ export class Operator {
     sourceChain: ChainName | ChainId,
     destChain: ChainName | ChainId,
     token: string,
-    destToken?: string,
+    destToken: string,
   ): Promise<BigNumber> {
     const r = this.getRoute(route);
     return r.getRelayerFee(sourceChain, destChain, token, destToken);
