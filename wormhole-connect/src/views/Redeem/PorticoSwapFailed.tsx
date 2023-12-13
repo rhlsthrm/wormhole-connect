@@ -1,7 +1,6 @@
 import React from 'react';
 import { makeStyles } from 'tss-react/mui';
-import { PorticoSwapFailedInfo } from 'routes/porticoBridge/types';
-import WarningIcon from '@mui/icons-material/Warning';
+import { PorticoSwapFailedInfo } from 'store/porticoBridge';
 
 const useStyles = makeStyles()((theme: any) => ({
   link: {
@@ -12,6 +11,7 @@ const useStyles = makeStyles()((theme: any) => ({
   root: {
     display: 'flex',
     gap: '8px',
+    marginTop: theme.spacing(2),
   },
   warningIcon: {
     color: theme.palette.warning[500],
@@ -26,7 +26,6 @@ const PorticoSwapFailed = ({
   const { classes } = useStyles();
   return (
     <div className={classes.root}>
-      <WarningIcon className={classes.warningIcon} />
       <div>
         {message}{' '}
         <a

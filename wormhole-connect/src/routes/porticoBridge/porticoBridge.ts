@@ -32,11 +32,7 @@ import {
   isEqualCaseInsensitive,
   toNormalizedDecimals,
 } from 'utils';
-import {
-  CreateOrderRequest,
-  CreateOrderResponse,
-  PorticoSwapFailedInfo,
-} from './types';
+import { CreateOrderRequest, CreateOrderResponse } from './types';
 import axios from 'axios';
 import { TransferWallet, signAndSendTransaction } from 'utils/wallet';
 import { porticoSwapFinishedEvent } from './abis';
@@ -51,7 +47,7 @@ import {
   parsePorticoPayload,
   validateCreateOrderResponse,
 } from './utils';
-import { PorticoBridgeState } from 'store/porticoBridge';
+import { PorticoBridgeState, PorticoSwapFailedInfo } from 'store/porticoBridge';
 
 export abstract class PorticoBridge extends BaseRoute {
   readonly NATIVE_GAS_DROPOFF_SUPPORTED: boolean = false;

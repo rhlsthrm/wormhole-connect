@@ -46,12 +46,6 @@ export interface PorticoPayload {
   relayerFee: BigNumber;
 }
 
-export interface PorticoSwapFailedInfo {
-  message: string;
-  swapUrl: string;
-  swapUrlText: string;
-}
-
 export interface RelayerQuoteRequest {
   target_chain: number; // wormhole chain ID
   source_token: string;

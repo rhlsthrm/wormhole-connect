@@ -16,6 +16,10 @@ export default function MilestoneStepper() {
   const transferComplete = useSelector(
     (state: RootState) => state.redeem.transferComplete,
   );
+  const swapFailedInfo = useSelector(
+    (state: RootState) => state.porticoBridge.swapFailedInfo,
+  );
+  const showWarning = !!swapFailedInfo;
   const activeStep = transferComplete ? 4 : !!signedMessage ? 2 : 1;
 
   const steps = [
@@ -26,10 +30,12 @@ export default function MilestoneStepper() {
     {
       label: 'Send to',
       component: <SendTo />,
+      warningLine: showWarning,
     },
     {
       label: 'Transaction complete',
       component: <BridgeComplete />,
+      warningLabel: showWarning,
     },
   ];
 

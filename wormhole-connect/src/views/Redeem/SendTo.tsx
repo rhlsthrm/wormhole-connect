@@ -26,11 +26,11 @@ import { estimateClaimGas } from 'utils/gas';
 import { isGatewayChain } from '../../utils/cosmos';
 import { Route } from 'config/types';
 import Switch from 'components/Switch';
-import PorticoSwapFailed from './PorticoSwapFailed';
 import { isPorticoRoute } from 'routes/porticoBridge/utils';
 import Tooltip from '@mui/material/Tooltip';
 import InfoIcon from 'icons/Info';
 import { makeStyles } from 'tss-react/mui';
+import { setSwapFailedInfo as setPorticoSwapFailedInfo } from 'store/porticoBridge';
 
 const useStyles = makeStyles()((theme: any) => ({
   flex: {
@@ -149,11 +149,21 @@ function SendTo() {
       })
         .then((destInfo) => {
           setTransferDestInfo(destInfo);
+          if (isPorticoRoute(routeName as Route) && !!destInfo.extraData) {
+            dispatch(setPorticoSwapFailedInfo(destInfo.extraData));
+          }
         })
         .catch((e) => console.error(e));
     };
     populate();
-  }, [transferComplete, getRedeemTx, txData, routeName, signedMessage]);
+  }, [
+    transferComplete,
+    getRedeemTx,
+    txData,
+    routeName,
+    signedMessage,
+    dispatch,
+  ]);
 
   useEffect(() => {
     setIsConnected(checkConnection());
@@ -246,10 +256,6 @@ function SendTo() {
           )}
         </>
         <RenderRows rows={transferDestInfo?.displayData || []} />
-        <>
-          {!!transferDestInfo?.extraData &&
-            getExtraDataComponent(routeName, transferDestInfo.extraData)}
-        </>
       </InputContainer>
 
       {/* Claim button for manual transfers */}
@@ -289,16 +295,6 @@ function SendTo() {
       {/* {pending && <Confirmations confirmations={vaa.guardianSignatures} />} */}
     </div>
   );
-}
-
-function getExtraDataComponent(
-  route: Route | undefined,
-  extraData: any,
-): JSX.Element | null {
-  if (route && isPorticoRoute(route)) {
-    return <PorticoSwapFailed info={extraData} />;
-  }
-  return null;
 }
 
 export default SendTo;
