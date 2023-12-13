@@ -4,22 +4,13 @@ import { useTheme } from '@mui/material/styles';
 import { useDispatch, useSelector } from 'react-redux';
 import { Wallet, WalletState } from '@xlabs-libs/wallet-aggregator-core';
 import {
-  SuiWallet,
-  getWallets as getSuiWallets,
-} from '@xlabs-libs/wallet-aggregator-sui';
-import {
-  SeiChainId,
-  SeiWallet,
-  getSupportedWallets as getSeiWallets,
-} from '@xlabs-libs/wallet-aggregator-sei';
-import {
   ChainConfig,
   ChainName,
   Context,
 } from '@wormhole-foundation/wormhole-connect-sdk';
 import { CHAIN_ID_EVMOS } from '@certusone/wormhole-sdk';
 
-import { CHAINS, CHAINS_ARR, ENV, RPCS } from 'config';
+import { CHAINS, CHAINS_ARR } from 'config';
 import { RootState } from 'store';
 import { setWalletModal } from 'store/router';
 import {
@@ -27,9 +18,8 @@ import {
   connectReceivingWallet,
   connectWallet,
 } from 'store/wallet';
-import { TransferWallet, setWalletConnection, wallets } from 'utils/wallet';
+import { TransferWallet, setWalletConnection } from 'utils/wallet';
 import { CENTER } from 'utils/style';
-import { getSeiChainId } from 'utils/sei';
 
 import Header from 'components/Header';
 import Modal from 'components/Modal';
@@ -97,26 +87,6 @@ type WalletData = {
   wallet: Wallet;
 };
 
-const fetchSuiOptions = async () => {
-  const suiWallets = await getSuiWallets({ timeout: 0 });
-  return suiWallets.reduce((obj: { [key: string]: SuiWallet }, value) => {
-    obj[value.getName()] = value;
-    return obj;
-  }, {});
-};
-
-const fetchSeiOptions = async () => {
-  const seiWallets = await getSeiWallets({
-    chainId: getSeiChainId(ENV) as SeiChainId,
-    rpcUrl: RPCS.sei || '',
-  });
-
-  return seiWallets.reduce((obj: { [key: string]: SeiWallet }, value) => {
-    obj[value.getName()] = value;
-    return obj;
-  }, {});
-};
-
 const mapWallets = (
   wallets: Record<string, Wallet>,
   type: Context,
@@ -134,48 +104,37 @@ const getWalletOptions = async (
   config: ChainConfig | undefined,
   chains: Set<Context>,
 ): Promise<WalletData[]> => {
-  if (!config) {
-    const suiOptions = await fetchSuiOptions();
-    const seiOptions = await fetchSeiOptions();
-
-    const allWallets: Partial<Record<Context, Record<string, Wallet>>> = {
-      [Context.ETH]: wallets.evm,
-      [Context.SOLANA]: wallets.solana,
-      [Context.SUI]: suiOptions,
-      [Context.APTOS]: wallets.aptos,
-      [Context.SEI]: seiOptions,
-      [Context.COSMOS]: wallets.cosmos,
-    };
-
-    return Object.keys(allWallets)
-      .filter((value) => chains.has(value as Context))
-      .map((value: string) =>
-        mapWallets(allWallets[value as Context]!, value as Context),
-      )
-      .reduce((acc, arr) => acc.concat(arr), []);
-  }
-  if (config.context === Context.ETH) {
-    return Object.values(mapWallets(wallets.evm, Context.ETH));
+  if (config === undefined) {
+    return [];
+  } else if (config.context === Context.ETH) {
+    let { wallets } = await import('utils/wallet/evm');
+    return Object.values(mapWallets(wallets, Context.ETH));
   } else if (config.context === Context.SOLANA) {
-    return Object.values(mapWallets(wallets.solana, Context.SOLANA));
+    let { fetchOptions } = await import('utils/wallet/solana');
+    let solanaWallets = fetchOptions();
+    return Object.values(mapWallets(solanaWallets, Context.SOLANA));
   } else if (config.context === Context.SUI) {
-    const suiOptions = await fetchSuiOptions();
+    let suiWallet = await import('utils/wallet/sui');
+    const suiOptions = await suiWallet.fetchOptions();
     return Object.values(mapWallets(suiOptions, Context.SUI));
   } else if (config.context === Context.APTOS) {
-    return Object.values(mapWallets(wallets.aptos, Context.APTOS));
+    let aptosWallet = await import('utils/wallet/aptos');
+    const aptosOptions = aptosWallet.fetchOptions();
+    return Object.values(mapWallets(aptosOptions, Context.APTOS));
   } else if (config.context === Context.SEI) {
-    const suiOptions = await fetchSeiOptions();
-    return Object.values(mapWallets(suiOptions, Context.SEI));
-  } else if (
-    config.context === Context.COSMOS &&
-    config.id !== CHAIN_ID_EVMOS
-  ) {
-    return Object.values(mapWallets(wallets.cosmos, Context.COSMOS));
-  } else if (
-    config.context === Context.COSMOS &&
-    config.id === CHAIN_ID_EVMOS
-  ) {
-    return Object.values(mapWallets(wallets.cosmosEvm, Context.COSMOS));
+    let seiWallet = await import('utils/wallet/sei');
+    const seiOptions = await seiWallet.fetchOptions();
+    return Object.values(mapWallets(seiOptions, Context.SEI));
+  } else if (config.context === Context.COSMOS) {
+    let {
+      wallets: { cosmos, cosmosEvm },
+    } = await import('utils/wallet/cosmos');
+
+    if (config.id === CHAIN_ID_EVMOS) {
+      return Object.values(mapWallets(cosmos, Context.SEI));
+    } else {
+      return Object.values(mapWallets(cosmosEvm, Context.SEI));
+    }
   }
   return [];
 };
@@ -187,8 +146,8 @@ type Props = {
 };
 
 function WalletsModal(props: Props) {
-  const { classes } = useStyles();
   const theme: any = useTheme();
+  const { classes } = useStyles(theme);
   const { chain: chainProp, type } = props;
   const dispatch = useDispatch();
   const { fromChain, toChain } = useSelector(

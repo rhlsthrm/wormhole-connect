@@ -12,8 +12,8 @@ import RouteOperator from 'routes/operator';
 import {
   TransferWallet,
   registerWalletSigner,
-  signSolanaTransaction,
   switchChain,
+  signAndSendTransaction,
 } from 'utils/wallet';
 
 import AlertBanner from 'components/AlertBanner';
@@ -46,7 +46,7 @@ function AssociatedTokenAlert() {
     );
     // if `tx` is null it means the account already exists
     if (!tx) return;
-    await signSolanaTransaction(tx, TransferWallet.RECEIVING);
+    await signAndSendTransaction('solana', tx, TransferWallet.RECEIVING);
     dispatch(setTxDetails({ ...txData, recipient: wallet.address }));
   }, [txData, wallet.address, dispatch]);
 
