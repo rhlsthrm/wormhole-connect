@@ -1,6 +1,5 @@
 import React from 'react';
 import { makeStyles } from 'tss-react/mui';
-import { PorticoSwapFailedInfo } from 'store/porticoBridge';
 
 const useStyles = makeStyles()((theme: any) => ({
   link: {
@@ -21,7 +20,7 @@ const useStyles = makeStyles()((theme: any) => ({
 const PorticoSwapFailed = ({
   info: { message, swapUrl, swapUrlText },
 }: {
-  info: PorticoSwapFailedInfo;
+  info: { message: string; swapUrl: string; swapUrlText: string };
 }) => {
   const { classes } = useStyles();
   return (

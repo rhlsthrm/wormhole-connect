@@ -13,9 +13,7 @@ import PorticoSwapFailed from './PorticoSwapFailed';
 
 function BridgeComplete() {
   const dispatch = useDispatch();
-  const { swapFailedInfo } = useSelector(
-    (state: RootState) => state.porticoBridge,
-  );
+  const destTxInfo = useSelector((state: RootState) => state.redeem.destTxInfo);
   const toLink = () => {
     if (typeof window !== 'undefined') {
       window.location.href = CTA!.link;
@@ -30,7 +28,9 @@ function BridgeComplete() {
       <InputContainer>
         <>
           <div>The bridge is now complete.</div>
-          {!!swapFailedInfo && <PorticoSwapFailed info={swapFailedInfo} />}
+          {!!destTxInfo?.swapFailed && (
+            <PorticoSwapFailed info={destTxInfo.swapFailed} />
+          )}
           {!!CTA && (
             <div>
               Click the button below to begin using your new Wormhole assets.

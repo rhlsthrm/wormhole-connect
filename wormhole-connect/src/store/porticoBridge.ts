@@ -10,19 +10,22 @@ import {
 export interface PorticoBridgeState {
   slippage: number;
   relayerFee: DataWrapper<string>;
-  swapFailedInfo: PorticoSwapFailedInfo | undefined;
+  destTxInfo: PorticoDestTxInfo | undefined;
 }
 
-export interface PorticoSwapFailedInfo {
-  message: string;
-  swapUrl: string;
-  swapUrlText: string;
+export interface PorticoDestTxInfo {
+  receivedTokenKey: string;
+  swapFailed?: {
+    message: string;
+    swapUrl: string;
+    swapUrlText: string;
+  };
 }
 
 const initialState: PorticoBridgeState = {
   slippage: 0.03,
   relayerFee: getEmptyDataWrapper(),
-  swapFailedInfo: undefined,
+  destTxInfo: undefined,
 };
 
 export const porticoBridgeSlice = createSlice({
@@ -53,12 +56,6 @@ export const porticoBridgeSlice = createSlice({
     ) => {
       state.relayerFee = errorDataWrapper(payload);
     },
-    setSwapFailedInfo: (
-      state: PorticoBridgeState,
-      { payload }: PayloadAction<PorticoSwapFailedInfo | undefined>,
-    ) => {
-      state.swapFailedInfo = payload;
-    },
     clearPorticoBridgeState: () => initialState,
   },
 });
@@ -68,7 +65,6 @@ export const {
   setRelayerFee,
   setFetchingRelayerFee,
   setRelayerFeeError,
-  setSwapFailedInfo,
   clearPorticoBridgeState,
 } = porticoBridgeSlice.actions;
 

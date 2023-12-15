@@ -16,10 +16,8 @@ export default function MilestoneStepper() {
   const transferComplete = useSelector(
     (state: RootState) => state.redeem.transferComplete,
   );
-  const swapFailedInfo = useSelector(
-    (state: RootState) => state.porticoBridge.swapFailedInfo,
-  );
-  const showWarning = !!swapFailedInfo;
+  const destTxInfo = useSelector((state: RootState) => state.redeem.destTxInfo);
+  const showWarning = !!destTxInfo?.swapFailed;
   const activeStep = transferComplete ? 4 : !!signedMessage ? 2 : 1;
 
   const steps = [

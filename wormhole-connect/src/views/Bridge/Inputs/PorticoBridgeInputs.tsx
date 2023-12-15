@@ -82,7 +82,9 @@ const predefinedValues = ['0.03', '0.05', '0.15'];
 
 const PorticoBridgeInputs = () => {
   const { classes } = useStyles();
-  const { slippage } = useSelector((state: RootState) => state.porticoBridge);
+  const slippage = useSelector(
+    (state: RootState) => state.porticoBridge.slippage,
+  );
   const [customSlippage, setCustomSlippage] = React.useState<string>('');
   const dispatch = useDispatch();
 

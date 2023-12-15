@@ -61,7 +61,7 @@ export interface NestedRow extends Row {
 
 export type TransferDestInfo = {
   displayData: TransferDisplayData;
-  extraData?: any;
+  destTxInfo?: any;
 };
 
 export type TransferDisplayData = NestedRow[];

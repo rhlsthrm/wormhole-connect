@@ -57,7 +57,7 @@ import {
   parsePorticoPayload,
   validateCreateOrderResponse,
 } from './utils';
-import { PorticoBridgeState, PorticoSwapFailedInfo } from 'store/porticoBridge';
+import { PorticoBridgeState, PorticoDestTxInfo } from 'store/porticoBridge';
 
 export abstract class PorticoBridge extends BaseRoute {
   readonly NATIVE_GAS_DROPOFF_SUPPORTED: boolean = false;
@@ -642,12 +642,15 @@ export abstract class PorticoBridge extends BaseRoute {
       if (!canonicalTokenAddress) {
         throw new Error('Canonical token address not found');
       }
-      const extraData: PorticoSwapFailedInfo = {
-        message: `The swap reverted on ${
-          getChainConfig(txData.toChain).displayName
-        } and you received Wormhole-wrapped ${receivedTokenDisplayName} instead. You can retry the swap here:`,
-        swapUrl: `${OKU_TRADE_BASE_URL}/${txData.toChain}/swap/${canonicalTokenAddress}/${finalTokenAddress}`,
-        swapUrlText: 'Oku Trade',
+      const destTxInfo: PorticoDestTxInfo = {
+        receivedTokenKey: txData.receivedTokenKey,
+        swapFailed: {
+          message: `The swap reverted on ${
+            getChainConfig(txData.toChain).displayName
+          } and you received Wormhole-wrapped ${receivedTokenDisplayName} instead. You can retry the swap here:`,
+          swapUrl: `${OKU_TRADE_BASE_URL}/${txData.toChain}/swap/${canonicalTokenAddress}/${finalTokenAddress}`,
+          swapUrlText: 'Oku Trade',
+        },
       };
       return {
         displayData: [
@@ -660,7 +663,7 @@ export abstract class PorticoBridge extends BaseRoute {
             value: NO_INPUT,
           },
         ],
-        extraData,
+        destTxInfo,
       };
     }
     // handle the case for when the swap succeeds
@@ -688,6 +691,9 @@ export abstract class PorticoBridge extends BaseRoute {
       MAX_DECIMALS,
     );
     const finalTokenDisplayName = getDisplayName(finalToken);
+    const destTxInfo: PorticoDestTxInfo = {
+      receivedTokenKey: finalToken.key,
+    };
     return {
       displayData: [
         {
@@ -699,6 +705,7 @@ export abstract class PorticoBridge extends BaseRoute {
           value: `${formattedRelayerFee} ${finalTokenDisplayName}`,
         },
       ],
+      destTxInfo,
     };
   }
 

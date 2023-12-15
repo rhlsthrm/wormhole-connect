@@ -5,9 +5,9 @@ import { useDispatch, useSelector } from 'react-redux';
 
 import { CHAINS } from 'config';
 import { RootState } from 'store';
-import { setRedeemTx, setTransferComplete } from 'store/redeem';
+import { setDestTxInfo, setRedeemTx, setTransferComplete } from 'store/redeem';
 import { displayAddress } from 'utils';
-import { TransferDestInfo } from 'routes';
+import { TransferDisplayData } from 'routes';
 import RouteOperator from 'routes/operator';
 import {
   TransferWallet,
@@ -30,7 +30,6 @@ import { isPorticoRoute } from 'routes/porticoBridge/utils';
 import Tooltip from '@mui/material/Tooltip';
 import InfoIcon from 'icons/Info';
 import { makeStyles } from 'tss-react/mui';
-import { setSwapFailedInfo as setPorticoSwapFailedInfo } from 'store/porticoBridge';
 
 const useStyles = makeStyles()((theme: any) => ({
   flex: {
@@ -105,7 +104,7 @@ function SendTo() {
 
   const [inProgress, setInProgress] = useState(false);
   const [isConnected, setIsConnected] = useState(checkConnection());
-  const [transferDestInfo, setTransferDestInfo] = useState<TransferDestInfo>();
+  const [rows, setRows] = useState([] as TransferDisplayData);
   const [openWalletModal, setWalletModal] = useState(false);
 
   // get the redeem tx, for automatic transfers only
@@ -141,9 +140,7 @@ function SendTo() {
           signedMessage,
         );
       }
-      if (isPorticoRoute(routeName as Route)) {
-        dispatch(setPorticoSwapFailedInfo(undefined));
-      }
+      dispatch(setDestTxInfo(undefined));
       await RouteOperator.getTransferDestInfo(routeName, {
         txData,
         receiveTx,
@@ -151,9 +148,9 @@ function SendTo() {
         gasEstimate,
       })
         .then((destInfo) => {
-          setTransferDestInfo(destInfo);
-          if (isPorticoRoute(routeName as Route) && !!destInfo.extraData) {
-            dispatch(setPorticoSwapFailedInfo(destInfo.extraData));
+          setRows(destInfo.displayData);
+          if (!!destInfo.destTxInfo) {
+            dispatch(setDestTxInfo(destInfo.destTxInfo));
           }
         })
         .catch((e) => console.error(e));
@@ -258,7 +255,7 @@ function SendTo() {
             />
           )}
         </>
-        <RenderRows rows={transferDestInfo?.displayData || []} />
+        <RenderRows rows={rows || []} />
       </InputContainer>
 
       {/* Claim button for manual transfers */}

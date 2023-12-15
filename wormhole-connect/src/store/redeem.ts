@@ -2,6 +2,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { ParsedMessage, ParsedRelayerMessage } from 'utils/sdk';
 import { SignedMessage } from 'routes';
 import { Route } from 'config/types';
+import { PorticoDestTxInfo } from './porticoBridge';
 
 export enum MessageType {
   BRIDGE = 1,
@@ -16,6 +17,7 @@ export interface RedeemState {
   transferComplete: boolean;
   isVaaEnqueued: boolean;
   route: Route | undefined;
+  destTxInfo: PorticoDestTxInfo | undefined;
 }
 
 const initialState: RedeemState = {
@@ -26,6 +28,7 @@ const initialState: RedeemState = {
   transferComplete: false,
   isVaaEnqueued: false,
   route: undefined,
+  destTxInfo: undefined,
 };
 
 export const redeemSlice = createSlice({
@@ -59,6 +62,12 @@ export const redeemSlice = createSlice({
     ) => {
       state.isVaaEnqueued = payload;
     },
+    setDestTxInfo: (
+      state: RedeemState,
+      { payload }: PayloadAction<PorticoDestTxInfo | undefined>,
+    ) => {
+      state.destTxInfo = payload;
+    },
     clearRedeem: (state: RedeemState) => {
       Object.keys(state).forEach((key) => {
         // @ts-ignore
@@ -80,6 +89,7 @@ export const {
   setRedeemTx,
   setTransferComplete,
   setIsVaaEnqueued,
+  setDestTxInfo,
   clearRedeem,
   setRoute,
   setSignedMessage,
