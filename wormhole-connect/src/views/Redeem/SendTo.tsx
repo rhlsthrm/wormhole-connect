@@ -229,7 +229,7 @@ function SendTo() {
 
   const loading = !isRelayerRoute
     ? inProgress && !transferComplete
-    : !transferComplete;
+    : !transferComplete && !manualClaim;
   const manualClaimText =
     transferComplete || isRelayerRoute // todo: should be the other enum, should be named better than payload id
       ? ''
