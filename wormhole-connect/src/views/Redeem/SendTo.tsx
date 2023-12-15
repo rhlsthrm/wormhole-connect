@@ -141,6 +141,9 @@ function SendTo() {
           signedMessage,
         );
       }
+      if (isPorticoRoute(routeName as Route)) {
+        dispatch(setPorticoSwapFailedInfo(undefined));
+      }
       await RouteOperator.getTransferDestInfo(routeName, {
         txData,
         receiveTx,

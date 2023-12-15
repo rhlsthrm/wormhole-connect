@@ -14,6 +14,8 @@ import {
   setAllSupportedDestTokens,
   TransferInputState,
   getNativeVersionOfToken,
+  setFetchingReceiveAmount,
+  setReceiveAmountError,
 } from 'store/transferInput';
 import { CHAINS, TOKENS, pageHeader, showHamburgerMenu } from 'config';
 import { TokenConfig } from 'config/types';
@@ -206,6 +208,7 @@ function Bridge() {
         const routeOptions = isPorticoRoute(route)
           ? portico
           : { toNativeToken, relayerFee };
+        dispatch(setFetchingReceiveAmount());
         const newReceiveAmount = await RouteOperator.computeReceiveAmount(
           route,
           Number.parseFloat(amount),
@@ -217,7 +220,7 @@ function Bridge() {
         );
         dispatch(setReceiveAmount(newReceiveAmount.toString()));
       } catch {
-        dispatch(setReceiveAmount(''));
+        dispatch(setReceiveAmountError('Error computing receive amount'));
       }
     };
     recomputeReceive();

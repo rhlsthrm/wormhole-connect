@@ -9,6 +9,8 @@ import {
   setAmount,
   setReceiveAmount,
   accessBalance,
+  setFetchingReceiveAmount,
+  setReceiveAmountError,
 } from 'store/transferInput';
 import { CHAINS, CHAINS_ARR, TOKENS } from 'config';
 import { TransferWallet, walletAcceptedChains } from 'utils/wallet';
@@ -98,6 +100,7 @@ function FromInputs() {
         const routeOptions = isPorticoRoute(route)
           ? portico
           : { toNativeToken, relayerFee };
+        dispatch(setFetchingReceiveAmount());
         const receiveAmount = await RouteOperator.computeReceiveAmount(
           route,
           number,
@@ -109,7 +112,7 @@ function FromInputs() {
         );
         dispatch(setReceiveAmount(`${receiveAmount}`));
       } catch {
-        dispatch(setReceiveAmount(''));
+        dispatch(setReceiveAmountError('Error computing receive amount'));
       }
     },
     [

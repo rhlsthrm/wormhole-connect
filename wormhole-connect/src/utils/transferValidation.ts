@@ -21,6 +21,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useDebounce } from 'use-debounce';
 import { isPorticoRoute } from 'routes/porticoBridge/utils';
 import { PorticoBridgeState } from 'store/porticoBridge';
+import { DataWrapper } from 'store/helpers';
 
 export const validateFromChain = (
   chain: ChainName | undefined,
@@ -163,16 +164,6 @@ export const validateForeignAsset = (
   return '';
 };
 
-export const validateReceiveAmount = (
-  route: Route | undefined,
-  amount: string,
-): ValidationErr => {
-  if (route && isPorticoRoute(route) && !amount) {
-    return 'Error fetching quote';
-  }
-  return '';
-};
-
 export const validateSolanaTokenAccount = (
   destChain: string | undefined,
   destTokenAddr: string,
@@ -184,6 +175,33 @@ export const validateSolanaTokenAccount = (
   if (!destTokenAddr) return '';
   if (destTokenAddr && !solanaTokenAccount) {
     return 'The associated token account for this asset does not exist on Solana, you must create it first';
+  }
+  return '';
+};
+
+export const validateRelayerFee = (
+  route: Route | undefined,
+  routeOptions: any,
+): ValidationErr => {
+  if (!route) return '';
+  if (isPorticoRoute(route) && routeOptions.relayerFee.error) {
+    return 'Error fetching relayer fee';
+  }
+  return '';
+};
+
+export const validateReceiveAmount = (
+  route: Route | undefined,
+  receiveAmount: DataWrapper<string>,
+  routeOptions: any,
+): ValidationErr => {
+  if (!route) return '';
+  if (
+    isPorticoRoute(route) &&
+    routeOptions.relayerFee.data &&
+    receiveAmount.error
+  ) {
+    return 'Error fetching quote';
   }
   return '';
 };
@@ -247,7 +265,8 @@ export const validateAll = async (
     route: validateRoute(route, availableRoutes),
     toNativeToken: '',
     foreignAsset: validateForeignAsset(foreignAsset),
-    receiveAmount: validateReceiveAmount(route, receiveAmount),
+    relayerFee: validateRelayerFee(route, routeOptions),
+    receiveAmount: validateReceiveAmount(route, receiveAmount, routeOptions),
   };
   if (!isAutomatic) return baseValidations;
   return {

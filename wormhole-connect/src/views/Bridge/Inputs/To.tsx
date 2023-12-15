@@ -111,7 +111,7 @@ function ToInputs() {
   const amountInput = (
     <AmountInput
       handleAmountChange={handleAmountChange}
-      value={receiveAmount}
+      value={receiveAmount.data || ''}
       disabled
       label={label}
     />
@@ -138,6 +138,7 @@ function ToInputs() {
         inputValidations={[
           validations.toChain,
           validations.destToken,
+          validations.relayerFee,
           validations.receiveAmount,
         ]}
         chain={toChain}

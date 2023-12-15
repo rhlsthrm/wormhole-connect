@@ -47,12 +47,12 @@ export interface PorticoPayload {
 }
 
 export interface RelayerQuoteRequest {
-  target_chain: number; // wormhole chain ID
-  source_token: string;
-  target_token: string;
+  targetChain: number;
+  sourceToken: string;
+  targetToken: string;
 }
 
 export interface RelayerQuoteResponse {
-  fee: number; // TODO: how can this be a number
-  valid_until: string;
+  fee: string;
+  validUntil: string;
 }

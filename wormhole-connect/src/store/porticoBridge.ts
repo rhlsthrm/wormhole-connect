@@ -1,8 +1,15 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import {
+  DataWrapper,
+  errorDataWrapper,
+  fetchDataWrapper,
+  getEmptyDataWrapper,
+  receiveDataWrapper,
+} from './helpers';
 
 export interface PorticoBridgeState {
   slippage: number;
-  relayerFee: string;
+  relayerFee: DataWrapper<string>;
   swapFailedInfo: PorticoSwapFailedInfo | undefined;
 }
 
@@ -14,7 +21,7 @@ export interface PorticoSwapFailedInfo {
 
 const initialState: PorticoBridgeState = {
   slippage: 0.03,
-  relayerFee: '',
+  relayerFee: getEmptyDataWrapper(),
   swapFailedInfo: undefined,
 };
 
@@ -32,7 +39,19 @@ export const porticoBridgeSlice = createSlice({
       state: PorticoBridgeState,
       { payload }: PayloadAction<string>,
     ) => {
-      state.relayerFee = payload;
+      state.relayerFee = receiveDataWrapper(payload);
+    },
+    setFetchingRelayerFee: (
+      state: PorticoBridgeState,
+      { payload }: PayloadAction<void>,
+    ) => {
+      state.relayerFee = fetchDataWrapper();
+    },
+    setRelayerFeeError: (
+      state: PorticoBridgeState,
+      { payload }: PayloadAction<string>,
+    ) => {
+      state.relayerFee = errorDataWrapper(payload);
     },
     setSwapFailedInfo: (
       state: PorticoBridgeState,
@@ -47,6 +66,8 @@ export const porticoBridgeSlice = createSlice({
 export const {
   setSlippage,
   setRelayerFee,
+  setFetchingRelayerFee,
+  setRelayerFeeError,
   setSwapFailedInfo,
   clearPorticoBridgeState,
 } = porticoBridgeSlice.actions;

@@ -5,7 +5,11 @@ import { useTheme } from '@mui/material/styles';
 import { RootState } from 'store';
 import { setTransferRoute } from 'store/transferInput';
 import { setRelayerFee } from 'store/relay';
-import { setRelayerFee as setPorticoRelayerFee } from 'store/porticoBridge';
+import {
+  setRelayerFee as setPorticoRelayerFee,
+  setFetchingRelayerFee as setFetchingPorticoRelayerFee,
+  setRelayerFeeError as setPorticoRelayerFeeError,
+} from 'store/porticoBridge';
 import { CHAINS, TOKENS } from 'config';
 import { Route } from 'config/types';
 import { getTokenDecimals } from 'utils';
@@ -64,7 +68,7 @@ function Preview(props: { collapsed: boolean }) {
         toChain,
         gasEst.send,
         gasEst.claim,
-        receiveAmount,
+        receiveAmount.data || '',
         routeOptions,
       );
 
@@ -99,6 +103,9 @@ function Preview(props: { collapsed: boolean }) {
         const tokenConfig = token && TOKENS[token];
         if (!tokenConfig) return;
 
+        if (isPorticoRoute(r.TYPE)) {
+          dispatch(setFetchingPorticoRelayerFee());
+        }
         const fee = await RouteOperator.getRelayerFee(
           route,
           fromChain,
@@ -124,7 +131,8 @@ function Preview(props: { collapsed: boolean }) {
             dispatch(setTransferRoute(Route.Bridge));
           }
         } else if (isPorticoRoute(r.TYPE)) {
-          dispatch(setPorticoRelayerFee(''));
+          dispatch(setPorticoRelayerFeeError('Error fetching relayer fee'));
+          console.error(e);
         } else {
           throw e;
         }

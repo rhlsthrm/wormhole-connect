@@ -17,7 +17,7 @@ import {
   TransferDestInfo,
 } from '../types';
 import { fetchGlobalTx, fetchVaa, getEmitterAndSequence } from 'utils/vaa';
-import { hexlify, parseUnits } from 'ethers/lib/utils.js';
+import { hexZeroPad, hexlify, parseUnits } from 'ethers/lib/utils.js';
 import { BaseRoute } from '../bridge';
 import { PayloadType, isEvmChain, toChainId, toChainName, wh } from 'utils/sdk';
 import { CHAINS, ROUTES, TOKENS, isMainnet } from 'config';
@@ -32,13 +32,23 @@ import {
   isEqualCaseInsensitive,
   toNormalizedDecimals,
 } from 'utils';
-import { CreateOrderRequest, CreateOrderResponse } from './types';
+import {
+  CreateOrderRequest,
+  CreateOrderResponse,
+  RelayerQuoteRequest,
+  RelayerQuoteResponse,
+} from './types';
 import axios from 'axios';
 import { TransferWallet, signAndSendTransaction } from 'utils/wallet';
 import { porticoSwapFinishedEvent } from './abis';
 import { getQuote } from './uniswapQuoter';
 import { toDecimals } from 'utils/balance';
-import { CREATE_ORDER_API_URL, FEE_TIER, OKU_TRADE_BASE_URL } from './consts';
+import {
+  CREATE_ORDER_API_URL,
+  FEE_TIER,
+  OKU_TRADE_BASE_URL,
+  RELAYER_FEE_API_URL,
+} from './consts';
 import { adaptParsedMessage } from 'routes/utils';
 import { TransferDestInfoParams } from 'routes/relay';
 import { NO_INPUT } from 'utils/style';
@@ -148,8 +158,7 @@ export abstract class PorticoBridge extends BaseRoute {
       !destToken ||
       !sendingChain ||
       !recipientChain ||
-      !routeOptions.relayerFee ||
-      // TODO: the caller should be responsible for making sure the route is available
+      !routeOptions.relayerFee.data ||
       !(await this.isRouteAvailable(
         token,
         destToken,
@@ -192,7 +201,7 @@ export abstract class PorticoBridge extends BaseRoute {
       startQuote.amountOut.toString(),
       FEE_TIER,
     );
-    const relayerFee = BigNumber.from(routeOptions.relayerFee);
+    const relayerFee = BigNumber.from(routeOptions.relayerFee.data);
     if (destQuote.amountOut.lt(relayerFee)) {
       throw new Error('Amount can not be less than relayer fee');
     }
@@ -253,16 +262,11 @@ export abstract class PorticoBridge extends BaseRoute {
     destToken: string,
     recipientChain?: ChainName | ChainId,
   ): number {
-    if (
-      !routeOptions ||
-      !routeOptions.relayerFee ||
-      !destToken ||
-      !recipientChain
-    ) {
+    if (!routeOptions.relayerFee.data || !destToken || !recipientChain) {
       return 0;
     }
     // need to at least cover the relayer fee
-    const relayerFee = BigNumber.from(routeOptions.relayerFee);
+    const relayerFee = BigNumber.from(routeOptions.relayerFee.data);
     const tokenId =
       destToken === 'native' ? 'native' : TOKENS[destToken].tokenId;
     const decimals = getTokenDecimals(toChainId(recipientChain), tokenId);
@@ -287,7 +291,7 @@ export abstract class PorticoBridge extends BaseRoute {
     if (!slippage) {
       throw new Error('slippage is required');
     }
-    if (!relayerFee) {
+    if (!relayerFee.data) {
       throw new Error('relayerFee is required');
     }
     const slippageBps = slippage * 100;
@@ -295,16 +299,10 @@ export abstract class PorticoBridge extends BaseRoute {
       throw new Error('slippage must be between 0.01% and 100%');
     }
     const sourceChainConfig = getChainConfig(sendingChain);
-    if (!sourceChainConfig) {
-      throw new Error('Unsupported source chain');
-    }
     const destChainConfig = getChainConfig(recipientChain);
-    if (!destChainConfig) {
-      throw new Error('Unsupported dest chain');
-    }
     const sourceGasToken = getGasToken(sendingChain);
     const isStartTokenNative =
-      token === 'native' || getTokenById(token)!.key === sourceGasToken.key;
+      token === 'native' || getTokenById(token)?.key === sourceGasToken.key;
     const startToken = isStartTokenNative
       ? getWrappedToken(sourceGasToken)
       : getTokenById(token);
@@ -340,7 +338,7 @@ export abstract class PorticoBridge extends BaseRoute {
       destinationToken: finalToken.tokenId.address,
       destinationAddress: recipientAddress,
       destinationChainId: Number(destChainConfig.chainId),
-      relayerFee,
+      relayerFee: relayerFee.data,
       feeTierStart: FEE_TIER,
       feeTierEnd: FEE_TIER,
       slippageStart: slippageBps,
@@ -425,21 +423,24 @@ export abstract class PorticoBridge extends BaseRoute {
     token: string,
     destToken: string,
   ): Promise<BigNumber> {
-    return BigNumber.from('0');
-    /*
     if (!destToken) {
       throw new Error('destToken is required');
     }
-    const sourceToken = getWrappedToken(
-      token === 'native' ? getGasToken(sourceChain) : TOKENS[token],
-    );
-    const targetToken = getWrappedToken(
-      destToken === 'native' ? getGasToken(destChain) : TOKENS[destToken],
+    const startToken = getWrappedToken(TOKENS[token]);
+    if (!startToken.tokenId) {
+      throw new Error('Unable to get start token');
+    }
+    const finalToken = getWrappedToken(TOKENS[destToken]);
+    if (!finalToken.tokenId) {
+      throw new Error('Unable to get final token');
+    }
+    const destCanonicalTokenAddress = await getCanonicalTokenAddress(
+      finalToken,
     );
     const request: RelayerQuoteRequest = {
-      target_chain: toChainId(destChain),
-      source_token: sourceToken.tokenId?.address!,
-      target_token: targetToken.tokenId?.address!,
+      targetChain: toChainId(destChain),
+      sourceToken: hexZeroPad(destCanonicalTokenAddress, 32).slice(2),
+      targetToken: hexZeroPad(finalToken.tokenId.address, 32).slice(2),
     };
     const response = await axios.post<RelayerQuoteResponse>(
       RELAYER_FEE_API_URL,
@@ -449,7 +450,6 @@ export abstract class PorticoBridge extends BaseRoute {
       throw new Error(`Error getting relayer fee: ${response.statusText}`);
     }
     return BigNumber.from(response.data.fee);
-    */
   }
 
   async getForeignAsset(
@@ -727,8 +727,8 @@ export abstract class PorticoBridge extends BaseRoute {
         : getTokenDecimals(toChainId(receipientChain), destToken.tokenId);
     let totalFeesText = '';
     let fee = '';
-    if (sendingGasEst && relayerFee) {
-      fee = toDecimals(relayerFee, destTokenDecimals, MAX_DECIMALS);
+    if (sendingGasEst && relayerFee.data) {
+      fee = toDecimals(relayerFee.data, destTokenDecimals, MAX_DECIMALS);
       totalFeesText = `${sendingGasEst} ${sourceGasTokenDisplayName} & ${fee} ${destTokenDisplayName}`;
     }
     return [
