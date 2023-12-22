@@ -26,7 +26,10 @@ export async function fetchOptions() {
   }, {});
 }
 
-export async function signTransaction(transaction: SendResult, wallet: Wallet) {
+export async function signAndSendTransaction(
+  transaction: SendResult,
+  wallet: Wallet,
+) {
   if (!wallet || !wallet.signAndSendTransaction) {
     throw new Error('wallet.signAndSendTransaction is undefined');
   }

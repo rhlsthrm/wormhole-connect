@@ -118,8 +118,8 @@ export const signAndSendTransaction = async (
       return tx.id;
     }
     case Context.SUI: {
-      let { signTransaction } = await import('utils/wallet/sui');
-      const tx = await signTransaction(transaction, wallet);
+      let { signAndSendTransaction } = await import('utils/wallet/sui');
+      const tx = await signAndSendTransaction(transaction, wallet);
       return tx.id;
     }
     case Context.APTOS: {
@@ -128,8 +128,8 @@ export const signAndSendTransaction = async (
       return tx.id;
     }
     case Context.SEI: {
-      let { signTransaction } = await import('utils/wallet/sei');
-      const tx = await signTransaction(transaction, wallet);
+      let { signAndSendTransaction } = await import('utils/wallet/sei');
+      const tx = await signAndSendTransaction(transaction, wallet);
       return tx.id;
     }
     case Context.COSMOS: {

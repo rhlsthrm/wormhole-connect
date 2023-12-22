@@ -11,7 +11,7 @@ export async function fetchOptions() {
   }, {});
 }
 
-export const signTransaction = async (
+export const signAndSendTransaction = async (
   transaction: SendResult,
   wallet: Wallet,
 ) => {
