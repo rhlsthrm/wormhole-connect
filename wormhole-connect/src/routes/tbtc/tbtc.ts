@@ -96,10 +96,18 @@ export class TBTCRoute extends BaseRoute {
       !ROUTES.includes(Route.TBTC) ||
       !sourceChain ||
       !destChain ||
-      TOKENS[sourceToken]?.symbol !== TBTC_TOKEN_SYMBOL ||
-      TOKENS[destToken]?.symbol !== TBTC_TOKEN_SYMBOL ||
-      !isTBTCCanonicalChain(sourceChain) ||
-      !isTBTCCanonicalChain(destChain)
+      !this.isSupportedSourceToken(
+        TOKENS[sourceToken],
+        TOKENS[destToken],
+        sourceChain,
+        destChain,
+      ) ||
+      !this.isSupportedDestToken(
+        TOKENS[destToken],
+        TOKENS[sourceToken],
+        sourceChain,
+        destChain,
+      )
     ) {
       return false;
     }
